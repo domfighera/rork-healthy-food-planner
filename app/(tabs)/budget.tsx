@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StatusBar,
   Modal,
   TextInput,
@@ -12,17 +13,27 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { DollarSign, Plus, X, Trash2 } from 'lucide-react-native';
+import { DollarSign, Plus, X, Trash2, PencilLine } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../contexts/AppContext';
 import Colors from '../../constants/colors';
 
 export default function BudgetScreen() {
   const insets = useSafeAreaInsets();
-  const { profile, weeklySpent, budgetEntries, addBudgetEntry, removeBudgetEntry } = useApp();
+  const { 
+    profile, 
+    weeklySpent, 
+    budgetEntries, 
+    addBudgetEntry, 
+    updateBudgetEntry, 
+    removeBudgetEntry 
+  } = useApp();
   const [showManualEntry, setShowManualEntry] = useState<boolean>(false);
   const [manualItemName, setManualItemName] = useState<string>('');
   const [manualItemPrice, setManualItemPrice] = useState<string>('');
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editingEntryName, setEditingEntryName] = useState<string>('');
+  const [editingPrice, setEditingPrice] = useState<string>('');
 
   const weeklyBudget = profile.weeklyBudget;
   const remaining = weeklyBudget - weeklySpent;
@@ -49,6 +60,33 @@ export default function BudgetScreen() {
     setManualItemName('');
     setManualItemPrice('');
     setShowManualEntry(false);
+  };
+  
+  const handleStartEditPrice = (entryId: string, entryName: string, currentPrice: number) => {
+    setEditingEntryId(entryId);
+    setEditingEntryName(entryName);
+    setEditingPrice(currentPrice.toFixed(2));
+  };
+  
+  const closeEditPrice = () => {
+    setEditingEntryId(null);
+    setEditingEntryName('');
+    setEditingPrice('');
+  };
+  
+  const handleSaveEditedPrice = () => {
+    if (!editingEntryId) {
+      return;
+    }
+
+    const price = parseFloat(editingPrice);
+    if (isNaN(price) || price <= 0) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
+
+    updateBudgetEntry(editingEntryId, { price });
+    closeEditPrice();
   };
   
   const handleDeleteEntry = (entryId: string, itemName: string) => {
@@ -79,7 +117,7 @@ export default function BudgetScreen() {
 
         <View style={styles.budgetCard}>
           <View style={styles.budgetHeader}>
-            <DollarSign size={32} color={Colors.primary.green} />
+            <DollarSign size={32} color={Colors.primary.blue} />
             <Text style={styles.budgetAmount}>${weeklySpent.toFixed(2)}</Text>
           </View>
           <Text style={styles.budgetLabel}>Spent this week</Text>
@@ -94,8 +132,8 @@ export default function BudgetScreen() {
                     percentUsed > 100
                       ? Colors.health.bad
                       : percentUsed > 80
-                      ? Colors.health.fair
-                      : Colors.primary.green,
+                      ? Colors.primary.darkBlue
+                      : Colors.primary.blue,
                 },
               ]}
             />
@@ -111,7 +149,7 @@ export default function BudgetScreen() {
               <Text
                 style={[
                   styles.statValue,
-                  { color: remaining < 0 ? Colors.health.bad : Colors.primary.green },
+                  { color: remaining < 0 ? Colors.health.bad : Colors.primary.blue },
                 ]}
               >
                 ${Math.abs(remaining).toFixed(2)}
@@ -144,7 +182,14 @@ export default function BudgetScreen() {
                     </Text>
                   </View>
                   <View style={styles.entryActions}>
-                    <Text style={styles.entryPrice}>${entry.price.toFixed(2)}</Text>
+                    <Pressable
+                      testID={`edit-price-${entry.id}`}
+                      style={({ pressed }) => [styles.priceBadge, pressed && styles.priceBadgePressed]}
+                      onPress={() => handleStartEditPrice(entry.id, entry.productName, entry.price)}
+                    >
+                      <Text style={styles.priceBadgeText}>${entry.price.toFixed(2)}</Text>
+                      <PencilLine size={16} color={Colors.primary.darkBlue} />
+                    </Pressable>
                     <TouchableOpacity
                       onPress={() => handleDeleteEntry(entry.id, entry.productName)}
                       style={styles.deleteButton}
@@ -223,13 +268,65 @@ export default function BudgetScreen() {
                 />
               </View>
               
-              <TouchableOpacity
-                style={styles.modalSubmitButton}
+              <Pressable
+                testID="manual-entry-submit"
+                style={({ pressed }) => [styles.modalSubmitButton, pressed && styles.modalSubmitButtonPressed]}
                 onPress={handleManualEntry}
               >
                 <Text style={styles.modalSubmitText}>Add to Budget</Text>
-              </TouchableOpacity>
+              </Pressable>
             </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={editingEntryId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeEditPrice}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={closeEditPrice}
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContentContainer}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Price</Text>
+              <TouchableOpacity onPress={closeEditPrice}>
+                <X size={24} color={Colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle} numberOfLines={1}>
+              {editingEntryName}
+            </Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Price ($)</Text>
+              <TextInput
+                testID="price-edit-input"
+                style={styles.textInput}
+                placeholder="0.00"
+                placeholderTextColor={Colors.text.light}
+                keyboardType="decimal-pad"
+                value={editingPrice}
+                onChangeText={setEditingPrice}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveEditedPrice}
+              />
+            </View>
+            <Pressable
+              testID="save-price-button"
+              style={({ pressed }) => [styles.modalSubmitButton, pressed && styles.modalSubmitButtonPressed]}
+              onPress={handleSaveEditedPrice}
+            >
+              <Text style={styles.modalSubmitText}>Save Price</Text>
+            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -372,13 +469,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.text.secondary,
   },
-  entryPrice: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: Colors.primary.green,
+  priceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.primary.lightBlue,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.primary.darkBlue,
+  },
+  priceBadgePressed: {
+    backgroundColor: Colors.primary.mediumBlue,
+  },
+  priceBadgeText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.primary.darkBlue,
   },
   actionButton: {
-    backgroundColor: Colors.primary.green,
+    backgroundColor: Colors.primary.blue,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -430,12 +541,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: '700' as const,
     color: Colors.text.primary,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 16,
   },
   inputGroup: {
     marginBottom: 20,
@@ -457,11 +573,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
   },
   modalSubmitButton: {
-    backgroundColor: Colors.primary.green,
+    backgroundColor: Colors.primary.blue,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+  },
+  modalSubmitButtonPressed: {
+    backgroundColor: Colors.primary.darkBlue,
   },
   modalSubmitText: {
     color: Colors.neutral.white,

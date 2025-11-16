@@ -18,7 +18,6 @@ import { generateText } from '@rork-ai/toolkit-sdk';
 import { useApp } from '../../contexts/AppContext';
 import { useMealPlan } from '../../contexts/MealPlanContext';
 import Colors from '../../constants/colors';
-import Logo from '../../components/Logo';
 
 interface GeneratedFoodItem {
   name: string;
@@ -407,9 +406,6 @@ Return ONLY a JSON object:
           <Text style={styles.addedNotificationText}>{notificationMessage}</Text>
         </Animated.View>
       )}
-      <View style={[styles.logoContainer, { top: insets.top + 12 }]}>
-        <Logo size="small" showText={false} />
-      </View>
       <ScrollView style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Search Foods</Text>
@@ -621,11 +617,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
-  },
-  logoContainer: {
-    position: 'absolute',
-    left: 24,
-    zIndex: 10,
   },
   content: {
     flex: 1,

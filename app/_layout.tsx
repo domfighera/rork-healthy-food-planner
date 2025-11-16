@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Animated, StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "../contexts/AppContext";
 import { MealPlanProvider } from "../contexts/MealPlanContext";
 import Logo from "../components/Logo";
@@ -73,9 +74,19 @@ function SplashView({ onComplete }: { onComplete: () => void }) {
   return (
     <Animated.View style={[styles.splashContainer, { opacity: fadeAnim }]}>
       <StatusBar barStyle="dark-content" />
-      <Logo size="large" showText={true} />
+      <Logo size="large" showText={false} />
+      <Text style={styles.splashTitle}>NutriScan</Text>
       <Text style={styles.splashTagline}>Smart Nutrition & Budget Tracking</Text>
     </Animated.View>
+  );
+}
+
+function LogoOverlay() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View pointerEvents="none" style={[styles.logoOverlay, { top: insets.top + 12 }]}> 
+      <Logo size="small" showText={false} />
+    </View>
   );
 }
 
@@ -99,7 +110,10 @@ export default function RootLayout() {
       <AppProvider>
         <MealPlanProvider>
           <GestureHandlerRootView style={styles.container}>
-            <AppNavigator />
+            <View style={styles.appShell}>
+              <AppNavigator />
+              <LogoOverlay />
+            </View>
           </GestureHandlerRootView>
         </MealPlanProvider>
       </AppProvider>
@@ -116,11 +130,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+  },
+  splashTitle: {
+    fontSize: 32,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
+    color: Colors.primary.blue,
   },
   splashTagline: {
     fontSize: 18,
     color: Colors.text.secondary,
     fontWeight: '500' as const,
+  },
+  appShell: {
+    flex: 1,
+  },
+  logoOverlay: {
+    position: 'absolute',
+    right: 20,
+    zIndex: 100,
   },
 });

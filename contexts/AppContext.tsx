@@ -84,6 +84,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutateBudget(updated);
   }, [budgetEntries, mutateBudget]);
   
+  const updateBudgetEntry = useCallback((entryId: string, updates: Partial<Omit<BudgetEntry, 'id' | 'date'>>) => {
+    const updated = budgetEntries.map((entry) =>
+      entry.id === entryId ? { ...entry, ...updates } : entry
+    );
+    mutateBudget(updated);
+  }, [budgetEntries, mutateBudget]);
+  
   const removeBudgetEntry = useCallback((entryId: string) => {
     const updated = budgetEntries.filter(entry => entry.id !== entryId);
     mutateBudget(updated);
@@ -114,6 +121,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     completeOnboarding,
     budgetEntries,
     addBudgetEntry,
+    updateBudgetEntry,
     removeBudgetEntry,
     clearBudgetEntries,
     weeklySpent,
@@ -125,6 +133,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     completeOnboarding,
     budgetEntries,
     addBudgetEntry,
+    updateBudgetEntry,
     removeBudgetEntry,
     clearBudgetEntries,
     weeklySpent,

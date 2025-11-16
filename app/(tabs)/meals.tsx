@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StatusBar,
   ActivityIndicator,
   Alert,
@@ -122,8 +123,13 @@ export default function MealsScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.generateButton, groceryInventory.length === 0 && styles.generateButtonDisabled]}
+            <Pressable
+              testID="generate-meal-plan-button"
+              style={({ pressed }) => [
+                styles.generateButton,
+                groceryInventory.length === 0 && styles.generateButtonDisabled,
+                pressed && !(isGeneratingMeals || groceryInventory.length === 0) && styles.generateButtonPressed,
+              ]}
               onPress={handleGenerateMeals}
               disabled={isGeneratingMeals || groceryInventory.length === 0}
             >
@@ -135,7 +141,7 @@ export default function MealsScreen() {
                   <Text style={styles.generateButtonText}>Generate Meal Plan</Text>
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : (
           <>
@@ -215,7 +221,7 @@ export default function MealsScreen() {
                               ? Colors.health.bad 
                               : selectedPlan.remainingCalories > 100
                               ? Colors.accent.orange
-                              : Colors.primary.cyan,
+                              : Colors.primary.blue,
                         },
                       ]}
                     />
@@ -247,7 +253,7 @@ export default function MealsScreen() {
                           </View>
                         </View>
                         {meal.isConsumed ? (
-                          <CheckCircle2 size={24} color={Colors.primary.cyan} />
+                          <CheckCircle2 size={24} color={Colors.primary.blue} />
                         ) : (
                           <View style={styles.consumeButton}>
                             <Text style={styles.consumeButtonText}>Mark Eaten</Text>
@@ -305,22 +311,27 @@ export default function MealsScreen() {
                   ))}
                 </View>
 
-                <TouchableOpacity
-                  style={styles.regenerateButton}
+                <Pressable
+                  testID="regenerate-meal-plan-button"
+                  style={({ pressed }) => [
+                    styles.regenerateButton,
+                    pressed && styles.regenerateButtonPressed,
+                    isGeneratingMeals && styles.regenerateButtonDisabled,
+                  ]}
                   onPress={handleGenerateMeals}
                   disabled={isGeneratingMeals}
                 >
                   {isGeneratingMeals ? (
-                    <ActivityIndicator color={Colors.primary.cyan} />
+                    <ActivityIndicator color={Colors.neutral.white} />
                   ) : (
                     <>
-                      <Calendar size={18} color={Colors.primary.cyan} />
+                      <Calendar size={18} color={Colors.neutral.white} />
                       <Text style={styles.regenerateButtonText}>
                         Regenerate Meal Plan
                       </Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </>
             )}
           </>
@@ -388,7 +399,7 @@ const styles = StyleSheet.create({
     color: Colors.health.bad,
   },
   generateButton: {
-    backgroundColor: Colors.primary.cyan,
+    backgroundColor: Colors.primary.blue,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -398,8 +409,12 @@ const styles = StyleSheet.create({
     gap: 10,
     minWidth: 200,
   },
+  generateButtonPressed: {
+    backgroundColor: Colors.primary.darkBlue,
+  },
   generateButtonDisabled: {
     backgroundColor: Colors.neutral.lightGray,
+    opacity: 0.6,
   },
   generateButtonText: {
     color: Colors.neutral.white,
@@ -422,8 +437,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dayChipSelected: {
-    backgroundColor: Colors.primary.cyan,
-    borderColor: Colors.primary.cyan,
+    backgroundColor: Colors.primary.mediumBlue,
+    borderColor: Colors.primary.darkBlue,
   },
   dayChipLabel: {
     fontSize: 13,
@@ -558,7 +573,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   consumeButton: {
-    backgroundColor: Colors.primary.lightCyan,
+    backgroundColor: Colors.primary.lightBlue,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -566,7 +581,7 @@ const styles = StyleSheet.create({
   consumeButtonText: {
     fontSize: 12,
     fontWeight: '600' as const,
-    color: Colors.primary.darkCyan,
+    color: Colors.primary.darkBlue,
   },
   mealNutrition: {
     flexDirection: 'row',
@@ -630,12 +645,20 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: Colors.primary.cyan,
-    backgroundColor: Colors.background.primary,
+    borderColor: Colors.primary.darkBlue,
+    backgroundColor: Colors.primary.mediumBlue,
+  },
+  regenerateButtonPressed: {
+    backgroundColor: Colors.primary.darkBlue,
+  },
+  regenerateButtonDisabled: {
+    backgroundColor: Colors.primary.lightBlue,
+    borderColor: Colors.primary.lightBlue,
+    opacity: 0.6,
   },
   regenerateButtonText: {
     fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.primary.cyan,
+    color: Colors.neutral.white,
   },
 });
