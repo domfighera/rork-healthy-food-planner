@@ -8,8 +8,9 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { Heart, AlertCircle, DollarSign, Target, RotateCcw } from 'lucide-react-native';
+import { Heart, AlertCircle, DollarSign, Target, RotateCcw, RefreshCw } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../contexts/AppContext';
 import { useMealPlan } from '../contexts/MealPlanContext';
@@ -18,7 +19,14 @@ import Colors from '../constants/colors';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { profile, updateProfile, clearBudgetEntries } = useApp();
+  const {
+    profile,
+    updateProfile,
+    clearBudgetEntries,
+    mergePreviousWeekGroceries,
+    isMergingPreviousWeek,
+    mergePreviousWeekError,
+  } = useApp();
   const { clearAllData } = useMealPlan();
   const router = useRouter();
 
@@ -52,6 +60,20 @@ export default function ProfileScreen() {
       ? current.filter((c) => c !== condition)
       : [...current, condition];
     updateProfile({ healthConditions: updated });
+  };
+
+  const handleMergePreviousWeek = () => {
+    mergePreviousWeekGroceries()
+      .then((added) => {
+        if (added === 0) {
+          Alert.alert('Nothing to Merge', 'No groceries from the previous week were found.');
+          return;
+        }
+        Alert.alert('Groceries Added', `Added ${added} item${added === 1 ? '' : 's'} from last week.`);
+      })
+      .catch(() => {
+        Alert.alert('Merge Failed', 'Unable to merge previous week right now. Please try again.');
+      });
   };
 
   return (
@@ -113,6 +135,31 @@ export default function ProfileScreen() {
               }}
             />
             <Text style={styles.inputSuffix}>/week</Text>
+          </View>
+          <View style={styles.mergeCard}>
+            <View style={styles.mergeInfo}>
+              <View style={styles.mergeHeader}>
+                <RefreshCw size={18} color={Colors.primary.blue} />
+                <Text style={styles.mergeTitle}>Bring Back Last Week</Text>
+              </View>
+              <Text style={styles.mergeSubtitle}>
+                Merge your previous week&apos;s grocery list into this week and keep your staples stocked.
+              </Text>
+              {mergePreviousWeekError && !isMergingPreviousWeek && (
+                <Text style={styles.mergeErrorText}>Unable to merge last week&apos;s groceries. Try again.</Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.mergeButton, isMergingPreviousWeek && styles.mergeButtonDisabled]}
+              onPress={handleMergePreviousWeek}
+              disabled={isMergingPreviousWeek}
+            >
+              {isMergingPreviousWeek ? (
+                <ActivityIndicator color={Colors.neutral.white} />
+              ) : (
+                <Text style={styles.mergeButtonText}>Merge Now</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -302,6 +349,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  mergeCard: {
+    marginTop: 20,
+    backgroundColor: Colors.background.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    padding: 16,
+    gap: 16,
+  },
+  mergeInfo: {
+    gap: 8,
+  },
+  mergeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mergeTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: Colors.text.primary,
+  },
+  mergeSubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  mergeErrorText: {
+    fontSize: 12,
+    color: Colors.health.bad,
+  },
+  mergeButton: {
+    backgroundColor: Colors.primary.blue,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mergeButtonDisabled: {
+    opacity: 0.7,
+  },
+  mergeButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.neutral.white,
   },
   optionChip: {
     paddingHorizontal: 16,
