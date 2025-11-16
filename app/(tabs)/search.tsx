@@ -77,30 +77,44 @@ export default function SearchScreen() {
     queryFn: async () => {
       if (!activeSearch.trim()) return [];
 
+      console.log('Starting Nutritionix search for:', activeSearch);
+
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(
           `https://trackapi.nutritionix.com/v2/search/instant?query=${encodeURIComponent(activeSearch)}`,
           {
             headers: {
               'x-app-id': '8c0e9b4e',
               'x-app-key': 'a33b5e89e76dd9a0d9e4f3c8f67a4f19',
-            }
+            },
+            signal: controller.signal,
           }
         );
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
+          console.error('Nutritionix API error:', response.status, response.statusText);
           throw new Error('Nutritionix API request failed');
         }
 
         const data = await response.json();
+        console.log('Nutritionix API response:', data);
+        
         const branded = (data.branded || []) as NutritionixItem[];
         const common = (data.common || []) as NutritionixItem[];
 
         const allItems = [...branded, ...common];
 
         if (allItems.length === 0) {
+          console.log('No items found in Nutritionix response');
           return [];
         }
+
+        console.log(`Processing ${allItems.length} items`);
 
         const enrichedResults = await Promise.all(
           allItems.slice(0, 10).map(async (item) => {
@@ -239,14 +253,21 @@ export default function SearchScreen() {
           })
         );
 
+        console.log('Successfully enriched results:', enrichedResults.length);
         return enrichedResults;
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.error('Search request timed out');
+          throw new Error('Search timed out. Please try again.');
+        }
         console.error('Search error:', error);
-        return [];
+        throw error;
       }
     },
     enabled: activeSearch.length > 0,
     staleTime: 1000 * 60 * 10,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const handleSearch = () => {
@@ -436,6 +457,22 @@ Return ONLY a JSON object:
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary.blue} />
             <Text style={styles.loadingText}>Searching Nutritionix database...</Text>
+          </View>
+        )}
+
+        {searchQuery$.isError && (
+          <View style={styles.errorContainer}>
+            <AlertTriangle size={48} color={Colors.health.bad} />
+            <Text style={styles.errorText}>Search Failed</Text>
+            <Text style={styles.errorSubtext}>
+              {searchQuery$.error?.message || 'Unable to search. Please check your connection and try again.'}
+            </Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => searchQuery$.refetch()}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -915,5 +952,35 @@ const styles = StyleSheet.create({
     color: Colors.neutral.white,
     fontSize: 15,
     fontWeight: '600' as const,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: Colors.health.bad,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary.blue,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.neutral.white,
   },
 });
