@@ -34,9 +34,14 @@ function AppNavigator() {
   const { profile, isLoading } = useApp();
   const router = useRouter();
   const segments = useSegments();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !isMounted) return;
 
     const inOnboarding = segments[0] === 'onboarding';
 
@@ -45,7 +50,7 @@ function AppNavigator() {
     } else if (profile.onboardingCompleted && inOnboarding) {
       router.replace('/(tabs)');
     }
-  }, [profile.onboardingCompleted, isLoading, segments, router]);
+  }, [profile.onboardingCompleted, isLoading, segments, router, isMounted]);
 
   return <RootLayoutNav />;
 }

@@ -25,6 +25,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('userProfile');
       return stored ? JSON.parse(stored) : DEFAULT_PROFILE;
     },
+    staleTime: Infinity,
   });
 
   const budgetQuery = useQuery({
@@ -33,6 +34,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('budgetEntries');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity,
   });
 
   const saveProfileMutation = useMutation({

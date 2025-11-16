@@ -24,6 +24,7 @@ export const [MealPlanProvider, useMealPlan] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('groceryInventory');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity,
   });
 
   const mealPlansQuery = useQuery({
@@ -32,6 +33,7 @@ export const [MealPlanProvider, useMealPlan] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('mealPlans');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity,
   });
 
   const healthScoreQuery = useQuery({
@@ -40,6 +42,7 @@ export const [MealPlanProvider, useMealPlan] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('healthScore');
       return stored ? JSON.parse(stored) : null;
     },
+    staleTime: Infinity,
   });
 
   const weightHistoryQuery = useQuery({
@@ -48,6 +51,7 @@ export const [MealPlanProvider, useMealPlan] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('weightHistory');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity,
   });
 
   const saveInventoryMutation = useMutation({
