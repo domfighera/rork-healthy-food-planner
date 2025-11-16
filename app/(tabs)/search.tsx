@@ -80,9 +80,6 @@ export default function SearchScreen() {
       console.log('Starting Nutritionix search for:', activeSearch);
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
         const response = await fetch(
           `https://trackapi.nutritionix.com/v2/search/instant?query=${encodeURIComponent(activeSearch)}`,
           {
@@ -90,11 +87,8 @@ export default function SearchScreen() {
               'x-app-id': '8c0e9b4e',
               'x-app-key': 'a33b5e89e76dd9a0d9e4f3c8f67a4f19',
             },
-            signal: controller.signal,
           }
         );
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
           console.error('Nutritionix API error:', response.status, response.statusText);
@@ -256,18 +250,14 @@ export default function SearchScreen() {
         console.log('Successfully enriched results:', enrichedResults.length);
         return enrichedResults;
       } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.error('Search request timed out');
-          throw new Error('Search timed out. Please try again.');
-        }
         console.error('Search error:', error);
         throw error;
       }
     },
     enabled: activeSearch.length > 0,
     staleTime: 1000 * 60 * 10,
-    retry: 2,
-    retryDelay: 1000,
+    retry: 1,
+    retryDelay: 500,
   });
 
   const handleSearch = () => {
