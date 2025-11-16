@@ -9,6 +9,7 @@ import { AppProvider, useApp } from "../contexts/AppContext";
 import { MealPlanProvider } from "../contexts/MealPlanContext";
 import Logo from "../components/Logo";
 import Colors from "../constants/colors";
+import { trpc, trpcClient } from "../lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -134,18 +135,20 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <MealPlanProvider>
-          <GestureHandlerRootView style={styles.container}>
-            <View style={styles.appShell}>
-              <AppNavigator />
-              <LogoOverlay />
-            </View>
-          </GestureHandlerRootView>
-        </MealPlanProvider>
-      </AppProvider>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+          <MealPlanProvider>
+            <GestureHandlerRootView style={styles.container}>
+              <View style={styles.appShell}>
+                <AppNavigator />
+                <LogoOverlay />
+              </View>
+            </GestureHandlerRootView>
+          </MealPlanProvider>
+        </AppProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
 
