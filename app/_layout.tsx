@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated, StatusBar } from "react-native";
+import { View, Text, StyleSheet, Animated, StatusBar, Pressable } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "../contexts/AppContext";
@@ -25,6 +25,14 @@ function RootLayoutNav() {
           title: "Product Details",
           presentation: "card"
         }} 
+      />
+      <Stack.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          presentation: "modal",
+          headerShown: false,
+        }}
       />
     </Stack>
   );
@@ -80,17 +88,32 @@ function SplashView({ onComplete }: { onComplete: () => void }) {
     <Animated.View style={[styles.splashContainer, { opacity: fadeAnim }]}>
       <StatusBar barStyle="dark-content" />
       <Logo size="large" showText={false} />
-      <Text style={styles.splashTitle}>NutriScan</Text>
-      <Text style={styles.splashTagline}>Smart Nutrition & Budget Tracking</Text>
+      <Text style={styles.splashTitle}>DietWise AI</Text>
+      <Text style={styles.splashTagline}>Intelligent Nutrition & Budget Planning</Text>
     </Animated.View>
   );
 }
 
 function LogoOverlay() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const handleOpenProfile = () => {
+    console.log('LogoOverlay: opening profile screen');
+    router.push('/profile');
+  };
+
   return (
-    <View pointerEvents="none" style={[styles.logoOverlay, { top: insets.top + 12 }]}> 
-      <Logo size="small" showText={false} />
+    <View style={[styles.logoOverlay, { top: insets.top + 12 }]}> 
+      <Pressable
+        onPress={handleOpenProfile}
+        testID="profile-logo-button"
+        accessibilityRole="button"
+        accessibilityLabel="Open profile"
+        style={({ pressed }) => [styles.logoButton, pressed && styles.logoButtonPressed]}
+      >
+        <Logo size="small" showText={false} />
+      </Pressable>
     </View>
   );
 }
@@ -155,5 +178,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     zIndex: 100,
+  },
+  logoButton: {
+    backgroundColor: 'rgba(20, 52, 106, 0.15)',
+    borderRadius: 24,
+    padding: 8,
+  },
+  logoButtonPressed: {
+    opacity: 0.75,
   },
 });

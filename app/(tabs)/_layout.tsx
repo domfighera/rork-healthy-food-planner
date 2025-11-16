@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { ScanBarcode, Search, DollarSign, User, ChefHat, Activity } from "lucide-react-native";
+import { ScanBarcode, Search, DollarSign, ChefHat, Activity } from "lucide-react-native";
 import React from "react";
 import Colors from "../../constants/colors";
 
@@ -54,13 +54,6 @@ export default function TabLayout() {
         options={{
           title: "Health",
           tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
         }}
       />
     </Tabs>
