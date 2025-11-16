@@ -3,29 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, BudgetEntry } from '../constants/types';
-import { trpcClient } from '../lib/trpc';
-
-interface GroceryHistoryPayload {
-  id: string;
-  productName: string;
-  price: number;
-  date: string;
-}
-
-interface MergeResponseEntry {
-  id: string;
-  productName: string;
-  price: number;
-  date: string;
-}
-
-const createClientIdentifier = (): string => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
 
 const DEFAULT_PROFILE: UserProfile = {
   name: '',
@@ -82,31 +59,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
   const { mutate: mutateBudget } = saveBudgetMutation;
 
-  const { mutate: recordGroceryHistory } = useMutation({
-    mutationFn: async (payload: GroceryHistoryPayload) => {
-      console.log('[AppContext] Syncing grocery history entry', payload);
-      await trpcClient.post<{ entry: unknown }, GroceryHistoryPayload>('/api/grocery-history/entry', payload);
-    },
-    onError: (error) => {
-      console.error('[AppContext] Failed to sync grocery history', error);
-    },
-  });
-
-  const {
-    mutateAsync: mergePreviousWeekAsync,
-    isPending: isMergingPreviousWeek,
-    error: mergePreviousWeekError,
-  } = useMutation({
-    mutationFn: async () => {
-      console.log('[AppContext] Requesting previous week grocery merge');
-      const response = await trpcClient.post<{ entries: MergeResponseEntry[] }, undefined>(
-        '/api/grocery-history/merge',
-        undefined,
-      );
-      return response.entries ?? [];
-    },
-  });
-
   useEffect(() => {
     if (profileQuery.data) {
       setProfile(profileQuery.data);
@@ -127,34 +79,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const addBudgetEntry = useCallback((entry: Omit<BudgetEntry, 'id' | 'date'>) => {
     const newEntry: BudgetEntry = {
       ...entry,
-      id: createClientIdentifier(),
+      id: Date.now().toString(),
       date: new Date().toISOString(),
     };
     const updated = [...budgetEntries, newEntry];
     mutateBudget(updated);
-    recordGroceryHistory({
-      id: newEntry.id,
-      productName: newEntry.productName,
-      price: newEntry.price,
-      date: newEntry.date,
-    });
-  }, [budgetEntries, mutateBudget, recordGroceryHistory]);
+  }, [budgetEntries, mutateBudget]);
   
   const updateBudgetEntry = useCallback((entryId: string, updates: Partial<Omit<BudgetEntry, 'id' | 'date'>>) => {
     const updated = budgetEntries.map((entry) =>
       entry.id === entryId ? { ...entry, ...updates } : entry
     );
     mutateBudget(updated);
-    const refreshedEntry = updated.find((entry) => entry.id === entryId);
-    if (refreshedEntry) {
-      recordGroceryHistory({
-        id: refreshedEntry.id,
-        productName: refreshedEntry.productName,
-        price: refreshedEntry.price,
-        date: refreshedEntry.date,
-      });
-    }
-  }, [budgetEntries, mutateBudget, recordGroceryHistory]);
+  }, [budgetEntries, mutateBudget]);
   
   const removeBudgetEntry = useCallback((entryId: string) => {
     const updated = budgetEntries.filter(entry => entry.id !== entryId);
@@ -180,40 +117,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutateProfile(newProfile);
   }, [profile, mutateProfile]);
 
-  const mergePreviousWeekGroceries = useCallback(async () => {
-    try {
-      const mergedEntries = await mergePreviousWeekAsync();
-      if (!mergedEntries || mergedEntries.length === 0) {
-        return 0;
-      }
-
-      const now = new Date().toISOString();
-      const newEntries: BudgetEntry[] = mergedEntries.map((entry) => ({
-        id: createClientIdentifier(),
-        productCode: `merged-${entry.id}`,
-        productName: entry.productName,
-        price: entry.price,
-        date: now,
-      }));
-
-      const updated = [...budgetEntries, ...newEntries];
-      mutateBudget(updated);
-      newEntries.forEach((entry) => {
-        recordGroceryHistory({
-          id: entry.id,
-          productName: entry.productName,
-          price: entry.price,
-          date: entry.date,
-        });
-      });
-
-      return newEntries.length;
-    } catch (error) {
-      console.error('[AppContext] Merge previous week failed', error);
-      throw error;
-    }
-  }, [mergePreviousWeekAsync, budgetEntries, mutateBudget, recordGroceryHistory]);
-
   return useMemo(() => ({
     profile,
     updateProfile,
@@ -224,9 +127,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     removeBudgetEntry,
     clearBudgetEntries,
     weeklySpent,
-    mergePreviousWeekGroceries,
-    isMergingPreviousWeek,
-    mergePreviousWeekError,
     isLoading: profileQuery.isLoading || budgetQuery.isLoading,
     isSaving: saveProfileMutation.isPending || saveBudgetMutation.isPending,
   }), [
@@ -239,9 +139,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     removeBudgetEntry,
     clearBudgetEntries,
     weeklySpent,
-    mergePreviousWeekGroceries,
-    isMergingPreviousWeek,
-    mergePreviousWeekError,
     profileQuery.isLoading,
     budgetQuery.isLoading,
     saveProfileMutation.isPending,

@@ -7,7 +7,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "../contexts/AppContext";
 import { MealPlanProvider } from "../contexts/MealPlanContext";
-import { FavoritesProvider } from "../contexts/FavoritesContext";
 import Logo from "../components/Logo";
 import Colors from "../constants/colors";
 import { trpc, trpcClient } from "../lib/trpc";
@@ -140,14 +139,12 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AppProvider>
           <MealPlanProvider>
-            <FavoritesProvider>
-              <GestureHandlerRootView style={styles.container}>
-                <View style={styles.appShell}>
-                  <AppNavigator />
-                  <LogoOverlay />
-                </View>
-              </GestureHandlerRootView>
-            </FavoritesProvider>
+            <GestureHandlerRootView style={styles.container}>
+              <View style={styles.appShell}>
+                <AppNavigator />
+                <LogoOverlay />
+              </View>
+            </GestureHandlerRootView>
           </MealPlanProvider>
         </AppProvider>
       </QueryClientProvider>

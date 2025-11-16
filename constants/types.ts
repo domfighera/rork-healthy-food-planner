@@ -70,14 +70,6 @@ export interface Product {
   estimatedPrice?: number;
 }
 
-export interface FavoriteItem {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  createdAt: string;
-}
-
 export interface BudgetEntry {
   id: string;
   productCode: string;
