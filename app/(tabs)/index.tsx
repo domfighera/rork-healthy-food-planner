@@ -12,7 +12,6 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ScanBarcode, X, FlashlightOff, Flashlight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/colors';
-import Logo from '../../components/Logo';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -115,9 +114,6 @@ export default function ScanScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Logo size="small" showText={false} />
-        </View>
         <View style={styles.header}>
           <Text style={styles.title}>Scan Product</Text>
           <Text style={styles.subtitle}>
@@ -162,12 +158,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
-  },
-  logoContainer: {
-    position: 'absolute',
-    top: 12,
-    left: 24,
-    zIndex: 10,
   },
   content: {
     flex: 1,

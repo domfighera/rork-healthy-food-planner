@@ -28,7 +28,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMealPlan } from '../../contexts/MealPlanContext';
 import { useApp } from '../../contexts/AppContext';
 import Colors from '../../constants/colors';
-import Logo from '../../components/Logo';
 import type { IngredientSeverity, BadIngredient } from '../../constants/types';
 
 export default function HealthScreen() {
@@ -150,9 +149,6 @@ export default function HealthScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
-      <View style={[styles.logoContainer, { top: insets.top + 12 }]}>
-        <Logo size="small" showText={false} />
-      </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Health Dashboard</Text>
@@ -639,11 +635,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
-  },
-  logoContainer: {
-    position: 'absolute',
-    left: 24,
-    zIndex: 10,
   },
   content: {
     flex: 1,
