@@ -20,26 +20,21 @@ import { useMealPlan } from '../../contexts/MealPlanContext';
 import Colors from '../../constants/colors';
 import Logo from '../../components/Logo';
 
-interface NutritionixItem {
-  food_name: string;
-  brand_name?: string;
-  serving_qty: number;
-  serving_unit: string;
-  nf_calories: number;
-  nf_total_fat: number;
-  nf_saturated_fat: number;
-  nf_cholesterol: number;
-  nf_sodium: number;
-  nf_total_carbohydrate: number;
-  nf_dietary_fiber: number;
-  nf_sugars: number;
-  nf_protein: number;
-  nf_ingredient_statement?: string;
-  photo?: {
-    thumb?: string;
-  };
-  nix_brand_id?: string;
-  nix_item_id?: string;
+interface GeneratedFoodItem {
+  name: string;
+  brand: string;
+  price: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  sugar: number;
+  sodium: number;
+  saturatedFat?: number;
+  ingredientStatement?: string;
+  warnings?: string[];
+  benefits?: string[];
 }
 
 interface SearchResult {
@@ -73,56 +68,75 @@ export default function SearchScreen() {
   const [fadeAnim] = useState(() => new Animated.Value(0));
 
   const searchQuery$ = useQuery({
-    queryKey: ['nutritionixSearch', activeSearch],
+    queryKey: ['foodSearch', activeSearch],
     queryFn: async () => {
       if (!activeSearch.trim()) return [];
 
-      console.log('Starting Nutritionix search for:', activeSearch);
+      console.log('Generating AI food search for:', activeSearch);
 
       try {
-        const response = await fetch(
-          `https://trackapi.nutritionix.com/v2/search/instant?query=${encodeURIComponent(activeSearch)}`,
-          {
-            headers: {
-              'x-app-id': '8c0e9b4e',
-              'x-app-key': 'a33b5e89e76dd9a0d9e4f3c8f67a4f19',
-            },
-          }
-        );
+        const prompt = `You are a nutrition specialist for American grocery shoppers. The user is searching for "${activeSearch}". Return ONLY a JSON array (no markdown) of 6 unique products from well-known US grocery brands that best match the query. Each item MUST:
+- use plain English names that US shoppers recognize
+- belong to established American brands sold nationwide
+- include only real-world branded products (no generics, no foreign brands)
 
-        if (!response.ok) {
-          console.error('Nutritionix API error:', response.status, response.statusText);
-          throw new Error('Nutritionix API request failed');
+Each JSON object must have:
+{
+  "name": "Product name",
+  "brand": "Brand name",
+  "price": 4.99,
+  "calories": 190,
+  "protein": 12,
+  "carbs": 20,
+  "fat": 7,
+  "fiber": 3,
+  "sugar": 8,
+  "sodium": 320,
+  "saturatedFat": 3,
+  "ingredientStatement": "comma-separated ingredients",
+  "warnings": ["optional health warning"],
+  "benefits": ["optional benefit"]
+}
+- price must be a realistic US price in dollars as a number (no symbols)
+- calories, protein, carbs, fat, fiber, sugar in grams
+- sodium in milligrams
+- ingredientStatement should describe the primary ingredients in English
+- warnings and benefits should each be arrays (can be empty)
+Return ONLY the JSON array.`;
+
+        const response = await generateText({
+          messages: [{ role: 'user', content: prompt }],
+        });
+
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+
+        if (!jsonMatch) {
+          console.error('Failed to parse AI food search response:', response);
+          throw new Error('Unable to generate search results');
         }
 
-        const data = await response.json();
-        console.log('Nutritionix API response:', data);
-        
-        const branded = (data.branded || []) as NutritionixItem[];
-        const common = (data.common || []) as NutritionixItem[];
+        const parsed = JSON.parse(jsonMatch[0]) as GeneratedFoodItem[];
+        console.log('AI food search raw results:', parsed);
 
-        const allItems = [...branded, ...common];
-
-        if (allItems.length === 0) {
-          console.log('No items found in Nutritionix response');
+        if (!Array.isArray(parsed) || parsed.length === 0) {
           return [];
         }
 
-        console.log(`Processing ${allItems.length} items`);
+        const trimmed = parsed.slice(0, 10);
 
         const enrichedResults = await Promise.all(
-          allItems.slice(0, 10).map(async (item) => {
-            const calories = item.nf_calories || 0;
-            const protein = item.nf_protein || 0;
-            const carbs = item.nf_total_carbohydrate || 0;
-            const fat = item.nf_total_fat || 0;
-            const fiber = item.nf_dietary_fiber || 0;
-            const sugar = item.nf_sugars || 0;
-            const sodium = item.nf_sodium || 0;
-            const saturatedFat = item.nf_saturated_fat || 0;
-
-            const ingredients = (item.nf_ingredient_statement || '').toLowerCase();
-            const brandName = item.brand_name || 'Generic';
+          trimmed.map(async (item) => {
+            const calories = Number.isFinite(Number(item.calories)) ? Number(item.calories) : 0;
+            const protein = Number.isFinite(Number(item.protein)) ? Number(item.protein) : 0;
+            const carbs = Number.isFinite(Number(item.carbs)) ? Number(item.carbs) : 0;
+            const fat = Number.isFinite(Number(item.fat)) ? Number(item.fat) : 0;
+            const fiber = Number.isFinite(Number(item.fiber)) ? Number(item.fiber) : 0;
+            const sugar = Number.isFinite(Number(item.sugar)) ? Number(item.sugar) : 0;
+            const sodium = Number.isFinite(Number(item.sodium)) ? Number(item.sodium) : 0;
+            const saturatedFat = Number.isFinite(Number(item.saturatedFat)) ? Number(item.saturatedFat) : 0;
+            const priceCandidate = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
+            const price = priceCandidate > 0 ? priceCandidate : 4.99;
+            const ingredients = (item.ingredientStatement || '').toLowerCase();
 
             const dangerousIngredients = [
               { name: 'sucralose', severity: 50 },
@@ -168,21 +182,6 @@ export default function SearchScreen() {
               }
             });
 
-            const pricePrompt = `Based on this brand product: "${item.food_name}" by ${brandName}, estimate a realistic US grocery store price in USD for one package. Return ONLY a number, nothing else. For example: 4.99`;
-
-            let price = 4.99;
-            try {
-              const priceText = await generateText({
-                messages: [{ role: 'user', content: pricePrompt }]
-              });
-              const parsed = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-              if (!isNaN(parsed) && parsed > 0) {
-                price = parsed;
-              }
-            } catch {
-              console.log('Price estimation failed, using default');
-            }
-
             const baseScore = Math.max(0, Math.min(100,
               100 -
               (sugar / 50 * 20) -
@@ -195,24 +194,24 @@ export default function SearchScreen() {
 
             const healthScore = Math.round(Math.max(0, baseScore - artificialPenalty));
 
-            const warnings: string[] = [];
-            const benefits: string[] = [];
+            const warningsSet = new Set<string>((item.warnings || []).map((warning) => warning));
+            const benefitsSet = new Set<string>((item.benefits || []).map((benefit) => benefit));
 
-            if (sugar > 15) warnings.push('High in sugar');
-            if (sodium > 400) warnings.push('High in sodium');
-            if (saturatedFat > 5) warnings.push('High in saturated fat');
+            if (sugar > 15) warningsSet.add('High in sugar');
+            if (sodium > 400) warningsSet.add('High in sodium');
+            if (saturatedFat > 5) warningsSet.add('High in saturated fat');
             if (foundBadIngredients.length > 0) {
-              warnings.push(`Contains: ${foundBadIngredients.slice(0, 2).join(', ')}`);
+              warningsSet.add(`Contains: ${foundBadIngredients.slice(0, 2).join(', ')}`);
             }
-            if (protein > 10) benefits.push('Good protein source');
-            if (fiber > 5) benefits.push('High fiber');
+            if (protein > 10) benefitsSet.add('Good protein source');
+            if (fiber > 5) benefitsSet.add('High fiber');
             if (foundBadIngredients.length === 0 && !ingredients.includes('artificial')) {
-              benefits.push('No artificial ingredients');
+              benefitsSet.add('No artificial ingredients');
             }
 
             const result: SearchResult = {
-              name: item.food_name,
-              brand: brandName,
+              name: item.name,
+              brand: item.brand,
               price,
               healthScore,
               calories: Math.round(calories),
@@ -223,16 +222,16 @@ export default function SearchScreen() {
               sugar: Math.round(sugar * 10) / 10,
               sodium: Math.round(sodium),
               saturatedFat: Math.round(saturatedFat * 10) / 10,
-              warnings,
-              benefits,
-              ingredientStatement: item.nf_ingredient_statement,
+              warnings: Array.from(warningsSet),
+              benefits: Array.from(benefitsSet),
+              ingredientStatement: item.ingredientStatement,
             };
 
             if (healthScore < 60) {
               try {
-                const altPrompt = `For this product: "${brandName} ${item.food_name}", suggest 2-3 healthier brand alternatives available in US grocery stores. Return as a simple JSON array of strings. For example: ["Brand A Product", "Brand B Product"]`;
+                const altPrompt = `For this product: "${item.brand} ${item.name}", suggest 2-3 healthier brand alternatives available in US grocery stores. Return as a simple JSON array of strings. For example: ["Brand A Product", "Brand B Product"]`;
                 const altText = await generateText({
-                  messages: [{ role: 'user', content: altPrompt }]
+                  messages: [{ role: 'user', content: altPrompt }],
                 });
                 const altMatch = altText.match(/\[.*?\]/s);
                 if (altMatch) {
@@ -247,11 +246,11 @@ export default function SearchScreen() {
           })
         );
 
-        console.log('Successfully enriched results:', enrichedResults.length);
+        console.log('Enriched food search results:', enrichedResults.length);
         return enrichedResults;
-      } catch (error: any) {
-        console.error('Search error:', error);
-        throw error;
+      } catch (error: unknown) {
+        console.error('Food search error:', error);
+        throw error instanceof Error ? error : new Error('Failed to generate search results');
       }
     },
     enabled: activeSearch.length > 0,
@@ -288,7 +287,7 @@ export default function SearchScreen() {
 
   const proceedWithAdd = async (item: SearchResult) => {
     addBudgetEntry({
-      productCode: `nutritionix-${Date.now()}`,
+      productCode: `ai-food-${Date.now()}`,
       productName: `${item.brand} ${item.name}`,
       price: item.price,
     });
@@ -415,13 +414,14 @@ Return ONLY a JSON object:
         <View style={styles.header}>
           <Text style={styles.title}>Search Foods</Text>
           <Text style={styles.subtitle}>
-            Powered by Nutritionix - Find any brand or food item
+            Discover trusted American brands with tailored nutrition insights
           </Text>
         </View>
 
         <View style={styles.searchContainer}>
           <SearchIcon size={20} color={Colors.text.secondary} />
           <TextInput
+            testID="search-input"
             style={styles.searchInput}
             placeholder="Search for products..."
             placeholderTextColor={Colors.text.light}
@@ -438,20 +438,20 @@ Return ONLY a JSON object:
         </View>
 
         {searchQuery && !activeSearch && (
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <TouchableOpacity testID="search-trigger-button" style={styles.searchButton} onPress={handleSearch}>
             <Text style={styles.searchButtonText}>Search</Text>
           </TouchableOpacity>
         )}
 
         {searchQuery$.isLoading && (
-          <View style={styles.loadingContainer}>
+          <View testID="search-loading" style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary.blue} />
-            <Text style={styles.loadingText}>Searching Nutritionix database...</Text>
+            <Text style={styles.loadingText}>Building American grocery matches...</Text>
           </View>
         )}
 
         {searchQuery$.isError && (
-          <View style={styles.errorContainer}>
+          <View testID="search-error" style={styles.errorContainer}>
             <AlertTriangle size={48} color={Colors.health.bad} />
             <Text style={styles.errorText}>Search Failed</Text>
             <Text style={styles.errorSubtext}>
@@ -467,7 +467,7 @@ Return ONLY a JSON object:
         )}
 
         {searchQuery$.data && searchQuery$.data.length > 0 && (
-          <View style={styles.resultsSection}>
+          <View testID="search-results-section" style={styles.resultsSection}>
             <Text style={styles.resultsTitle}>
               Found {searchQuery$.data.length} products
             </Text>
